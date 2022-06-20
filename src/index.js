@@ -1,20 +1,39 @@
-// import express
+require("dotenv").config();
+
 const express = require("express");
+const mysql2 = require("mysql2/promise");
 
 const routes = require("./routes");
+const dbMiddleware = require("./middleware/db");
 
-// declare a PORT
-const PORT = process.env.PORT || 4000;
+const init = async () => {
+	try {
+		const PORT = process.env.PORT || 4000;
 
-// create a app instance using express
-const app = express();
+		const dbConfig = {
+			host: process.env.DB_HOST,
+			user: process.env.DB_USER,
+			password: process.env.DB_PASSWORD,
+			database: process.env.DB_NAME,
+		};
 
-// add our middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(routes);
+		const db = await mysql2.createConnection(dbConfig);
 
-// listen for requests
-app.listen(PORT, () => {
-	console.log(`Sever running on http://localhost:${PORT}`);
-});
+		const app = express();
+
+		// add our middleware
+		app.use(express.json());
+		app.use(express.urlencoded({ extended: true }));
+		app.use(dbMiddleware(db));
+		app.use(routes);
+
+		// listen for requests
+		app.listen(PORT, () => {
+			console.log(`Sever running on http://localhost:${PORT}`);
+		});
+	} catch (error) {
+		console.log(`[ERROR]: Failed to start server | ${error.message}`);
+	}
+};
+
+init();
